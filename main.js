@@ -5,6 +5,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GUI } from 'dat.gui'
 import { Vector3 } from 'three'
 
+import textureUrl from './src/gltf/materialbasecolortexture.png'
+import model from './src/gltf/cane_2/cane_flat_v2.gltf?url'
+
 let controls
 let initialPos
 
@@ -14,9 +17,7 @@ const dot = new THREE.SphereGeometry(0.1, 6, 6)
 const mat = new THREE.MeshStandardMaterial({ color: '#ff0000' })
 const m = new THREE.Mesh(dot, mat)
 
-const texture = new THREE.TextureLoader().load(
-	'./src/gltf/materialbasecolortexture.png'
-)
+const texture = new THREE.TextureLoader().load(textureUrl)
 
 m.position.z = 3
 
@@ -154,7 +155,7 @@ function onResize() {
 }
 
 const axesHelper = new THREE.AxesHelper(5)
-scene.add(axesHelper)
+// scene.add(axesHelper)
 
 const renderer = new THREE.WebGLRenderer({
 	antialias: true,
@@ -284,7 +285,7 @@ let animal
 let meshes = []
 let positions = []
 
-loader.load('./src/gltf/cane_2/cane_flat_v2.gltf', (gltf) => {
+loader.load(model, (gltf) => {
 	// const fox = gltf.scene.children[0].children[0].children[0].children[0]
 	animal = gltf.scene
 	// fox.rotateX(-Math.PI * 0.5)
