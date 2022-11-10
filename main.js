@@ -3,8 +3,17 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GUI } from 'dat.gui'
+import { Vector3 } from 'three'
+
+let controls
+
+const totalAngle = new THREE.Vector2(0, 0)
 
 const gui = new GUI()
+const COS = Math.cos
+const SIN = Math.sin
+const frustumSize = 5
+let aspect = window.innerWidth / window.innerHeight
 
 const startAngle = {
 	x: Math.PI * 2 * Math.random(),
@@ -12,10 +21,11 @@ const startAngle = {
 }
 
 const lastMousePos = new THREE.Vector2(0, 0)
-const mouse = new THREE.Vector2(
+const prevMouse = new THREE.Vector2(
 	Math.random() * 360 - 180,
 	Math.random() * 360 - 180
 )
+const mouse = new THREE.Vector2().copy(prevMouse)
 let drag = false
 
 const dir = new THREE.Vector3().setFromSphericalCoords(
@@ -32,10 +42,43 @@ const arrow = new THREE.ArrowHelper(
 
 function onMove(e) {
 	if (!drag) return
+
+	prevMouse.copy(mouse)
+
 	mouse.x = -lastMousePos.x + e.pageX
 	mouse.y = lastMousePos.y - e.pageY
 
-	console.log(mouse)
+	const diff = mouse.clone().sub(prevMouse.clone()).multiplyScalar(0.01)
+
+	const a = diff.x
+	const b = -diff.y
+
+	totalAngle.x += a
+	totalAngle.y += b
+
+	const m = new THREE.Matrix3(COS(a), 0, SIN(a), 0, 1, 0, -SIN(a), 0, COS(a))
+
+	// console.log(animal)
+	// console.log('prima', animal.children[0].position)
+
+	animal.children.forEach((el) => {
+		const p = el.position.clone()
+		// console.log('prima', p)
+		el.position.applyAxisAngle(new Vector3(0, 1, 0), a)
+		el.position.applyAxisAngle(new Vector3(1, 0, 0), b)
+
+		// console.log('dopo', a, el.position)
+		// el.position.z += (Math.random() - 0.5) * 1
+		// const mesh = el.children[0]
+		// positions.push(mesh.localToWorld(mesh.geometry.boundingSphere.center))
+		// mesh.position.z += (Math.random() - 0.5) * 1.5
+		// meshes.push(mesh)
+		// scene.add(mesh)
+	})
+
+	// console.log('dopo', animal.children[0].position.applyMatrix3(m))
+
+	// console.log(mouse)
 }
 
 window.addEventListener('mousedown', function (e) {
@@ -47,6 +90,14 @@ window.addEventListener('mousedown', function (e) {
 
 window.addEventListener('mouseup', function () {
 	drag = false
+
+	mouse.x = 0
+	mouse.y = 0
+
+	// applyTransformation()
+
+	// lastMousePos.x = mouse.x = 0
+	// lastMousePos.y = mouse.y = 0
 })
 
 window.addEventListener('mousemove', onMove)
@@ -59,20 +110,34 @@ const scene = new THREE.Scene()
 // 	1000
 // )
 // scene.add(arrow)
-const width = window.innerWidth * 0.005
-const height = window.innerHeight * 0.005
 
 const camera = new THREE.OrthographicCamera(
-	-width / 2,
-	width / 2,
-	height / 2,
-	-height / 2,
+	(frustumSize * aspect) / -2,
+	(frustumSize * aspect) / 2,
+	frustumSize / 2,
+	frustumSize / -2,
 	0.1,
 	100
 )
 
+function onResize() {
+	aspect = window.innerWidth / window.innerHeight
+
+	camera.left = (frustumSize * aspect) / -2
+	camera.right = (frustumSize * aspect) / 2
+	camera.top = frustumSize / 2
+	camera.bottom = frustumSize / -2
+
+	camera.lookAt(new THREE.Vector3(0, 0, 0))
+
+	camera.updateProjectionMatrix()
+	controls?.update()
+
+	renderer.setSize(window.innerWidth, window.innerHeight)
+}
+
 const axesHelper = new THREE.AxesHelper(5)
-// scene.add(axesHelper)
+scene.add(axesHelper)
 
 const renderer = new THREE.WebGLRenderer({
 	antialias: true,
@@ -86,12 +151,12 @@ renderer.setClearColor(new THREE.Color('#dcddff'))
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
-// const controls = new OrbitControls(camera, renderer.domElement)
+// controls = new OrbitControls(camera, renderer.domElement)
 
 camera.position.set(0, 0, 5)
 camera.lookAt(new THREE.Vector3(0, 0, 0))
 
-// controls.update()
+controls?.update()
 const uPos = { value: Math.random() * 0.3 + 0.3 }
 
 gui.add(uPos, 'value', 0, 1).name('uPos')
@@ -117,6 +182,7 @@ function breakMesh(group) {
 				uOffset: { value: Math.random() },
 				uPos,
 				uMouse: { value: mouse },
+				uPrevMouse: { value: prevMouse },
 				uCenter: { value: mesh.geometry.boundingSphere.center },
 			})
 
@@ -129,6 +195,7 @@ function breakMesh(group) {
 				uniform float uOffset;
 				uniform float uPos;
 				uniform vec2 uMouse;
+				uniform vec2 uPrevMouse;
 				uniform vec3 uCenter;
 
 				mat2 rotate2d(float _angle) {
@@ -153,28 +220,34 @@ function breakMesh(group) {
 				float nOffset = uOffset -.5;
 				float offset = dot(normalize(uMouse),vec2(0,1)) - 1.;
 				float zOffset = 60.;
+
+				vec2 mouse = uMouse * 0.01;
+				vec2 prevMouse = uPrevMouse * 0.01;
+				vec2 deltaMouse = prevMouse - mouse;
 				
 				// transformed *= offset * nOffset;
-				float a = -uMouse.y * 0.01;
-				float b = -uMouse.x * 0.01;
+				float a = -mouse.y;
+				float b = -mouse.x;
+				float deltaA = deltaMouse.x;
+				float deltaB = deltaMouse.y;
 				
-				vec3 center = uCenter + vec3(0,0,zOffset * nOffset);
-				transformed.z += zOffset * nOffset;
+				// vec3 center = uCenter + vec3(0,0,zOffset * nOffset);
+				// transformed.z += zOffset * nOffset;
 
-				transformed.xz *= rotate2d( b );
-				transformed.yz *= rotate2d( a );
+				// transformed.xz *= rotate2d( b  );
+				// transformed.yz *= rotate2d( a );
 
-				center.xz *= rotate2d( b );
-				center.yz *= rotate2d( a );
+				// center.xz *= rotate2d( b  );
+				// center.yz *= rotate2d( a );
 				
 				
-				transformed.xz = rotateAroundVertex( -b ,transformed.xz, center.xz );
-				transformed.yz = rotateAroundVertex( -a ,transformed.yz, center.yz );
+				// transformed.xz = rotateAroundVertex( -b ,transformed.xz, center.xz );
+				// transformed.yz = rotateAroundVertex( -a ,transformed.yz, center.yz );
 
 				// vec2 p = vec2(transformed.xy) - vec2(20.,0);
 				// transformed.xy = p*rotate2d( a ) + vec2(20.,0) ;
 
-				transformed.xy = rotateAroundVertex( sin(b) * sin(b) * sin(b) * 3.14 ,transformed.xy,center.xy );
+				// transformed.xy = rotateAroundVertex( sin(b) * sin(b) * sin(b) * 3.14 ,transformed.xy,center.xy );
 			
 			`
 			)
@@ -184,22 +257,11 @@ function breakMesh(group) {
 	})
 }
 
-// loader.load('./src/gltf/Fox.gltf', (gltf) => {
-// 	// const fox = gltf.scene.children[0].children[0].children[0].children[0]
-// 	const animal = gltf.scene
-// 	// fox.rotateX(-Math.PI * 0.5)
-// 	// fox.position.set(0, 0, 2)
-// 	scene.add(animal)
-// 	console.log(animal)
-
-// 	// breakMesh(animal)
-// })
-
 let animal
 let meshes = []
 let positions = []
 
-loader.load('./src/gltf/cane_flat.gltf', (gltf) => {
+loader.load('./src/gltf/cane.gltf', (gltf) => {
 	// const fox = gltf.scene.children[0].children[0].children[0].children[0]
 	animal = gltf.scene
 	// fox.rotateX(-Math.PI * 0.5)
@@ -211,6 +273,7 @@ loader.load('./src/gltf/cane_flat.gltf', (gltf) => {
 	breakMesh(animal)
 
 	animal.children.forEach((el) => {
+		el.position.z = 0
 		// el.position.z += (Math.random() - 0.5) * 1
 		// const mesh = el.children[0]
 		// positions.push(mesh.localToWorld(mesh.geometry.boundingSphere.center))
@@ -244,7 +307,7 @@ function animate() {
 	requestAnimationFrame(animate)
 
 	// required if controls.enableDamping or controls.autoRotate are set to true
-	// controls.update()
+	// controls?.update()
 	const t = clock.getElapsedTime()
 
 	// foxMeshes.forEach((mesh, i) => {
@@ -253,35 +316,37 @@ function animate() {
 	// 		(Math.sin(t + i * 10) ** 2 - Math.cos(t + i * 10) ** 2) * 0.001
 	// 	// mesh.position.z += Math.sin(t + i * 10) * 0.01
 	// })
-	arrow.setDirection(
-		new THREE.Vector3().setFromSphericalCoords(
-			1,
-			startAngle.y + mouse.y / 300,
-			startAngle.x + mouse.x / 300
-		)
-	)
+	// arrow.setDirection(
+	// 	new THREE.Vector3().setFromSphericalCoords(
+	// 		1,
+	// 		startAngle.y + mouse.y / 300,
+	// 		startAngle.x + mouse.x / 300
+	// 	)
+	// )
+
+	// animal.forEach
 
 	if (animal) {
-		const x = -mouse.x / 300
-		const y = -mouse.y / 300
-
-		// animal.rotation.x = -mouse.y / 300
-		// animal.rotation.y = mouse.x / 300
-
-		// meshes.forEach((el, i) => {
-		// 	// el.rotation.z = Math.PI * 2. * sin
-		// 	// const r = positions[i].length()
-		// 	// const x = Math.sin(y) * r
-		// 	// el.position.x = positions[i].x + addX
-		// 	el.position.x =
-		// 		positions[i].x * Math.cos(x) + positions[i].z * Math.sin(x)
-		// 	// el.position.z = positions[i].z + addZ
-		// 	el.position.z =
-		// 		positions[i].x * Math.sin(x) - positions[i].z * Math.cos(x)
-		// })
+		// 	const x = -mouse.x / 300
+		// 	const y = -mouse.y / 300
+		// 	// animal.rotation.x = -mouse.y / 300
+		// 	// animal.rotation.y = mouse.x / 300
+		// 	// meshes.forEach((el, i) => {
+		// 	// 	// el.rotation.z = Math.PI * 2. * sin
+		// 	// 	// const r = positions[i].length()
+		// 	// 	// const x = Math.sin(y) * r
+		// 	// 	// el.position.x = positions[i].x + addX
+		// 	// 	el.position.x =
+		// 	// 		positions[i].x * Math.cos(x) + positions[i].z * Math.sin(x)
+		// 	// 	// el.position.z = positions[i].z + addZ
+		// 	// 	el.position.z =
+		// 	// 		positions[i].x * Math.sin(x) - positions[i].z * Math.cos(x)
+		// 	// })
 	}
 
 	renderer.render(scene, camera)
 }
 
 animate()
+
+window.addEventListener('resize', onResize)
