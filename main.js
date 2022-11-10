@@ -7,6 +7,7 @@ import { Vector3 } from 'three'
 
 import textureUrl from './src/gltf/materialbasecolortexture.png'
 import model from './src/gltf/cane_2/cane_flat_v2.gltf?url'
+import modelBin from './src/gltf/cane_2/cane_flat_v2.bin?url'
 
 let controls
 let initialPos
