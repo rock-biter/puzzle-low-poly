@@ -6,10 +6,23 @@ import { GUI } from 'dat.gui'
 import { Vector3 } from 'three'
 
 let controls
+let initialPos
 
-const totalAngle = new THREE.Vector2(0, 0)
+const totalAngle = new THREE.Vector2(Math.random(), Math.random())
 
-const gui = new GUI()
+const dot = new THREE.SphereGeometry(0.1, 6, 6)
+const mat = new THREE.MeshStandardMaterial({ color: '#ff0000' })
+const m = new THREE.Mesh(dot, mat)
+
+const texture = new THREE.TextureLoader().load(
+	'./src/gltf/materialbasecolortexture.png'
+)
+
+m.position.z = 3
+
+applyDeltaRot(m, new THREE.Vector2(totalAngle.x, totalAngle.y))
+
+// const gui = new GUI()
 const COS = Math.cos
 const SIN = Math.sin
 const frustumSize = 5
@@ -40,6 +53,20 @@ const arrow = new THREE.ArrowHelper(
 	'#ff0000'
 )
 
+function applyDeltaRot(mesh, angle2) {
+	const a = angle2.x
+	const b = -angle2.y
+
+	mesh.position.applyAxisAngle(new Vector3(0, 1, 0), a)
+	mesh.position.applyAxisAngle(new Vector3(1, 0, 0), b)
+}
+
+function rotatePuzzle(group, angle2) {
+	group.children.forEach((el) => {
+		applyDeltaRot(el, angle2)
+	})
+}
+
 function onMove(e) {
 	if (!drag) return
 
@@ -51,56 +78,46 @@ function onMove(e) {
 	const diff = mouse.clone().sub(prevMouse.clone()).multiplyScalar(0.01)
 
 	const a = diff.x
-	const b = -diff.y
+	const b = diff.y
 
 	totalAngle.x += a
-	totalAngle.y += b
+	totalAngle.y -= b
 
-	const m = new THREE.Matrix3(COS(a), 0, SIN(a), 0, 1, 0, -SIN(a), 0, COS(a))
+	// const m = new THREE.Matrix3(COS(a), 0, SIN(a), 0, 1, 0, -SIN(a), 0, COS(a))
 
 	// console.log(animal)
 	// console.log('prima', animal.children[0].position)
+	// console.log(a, b)
+	// console.log(m.position)
+	const angle2 = new THREE.Vector2(a, b)
+	applyDeltaRot(m, angle2)
 
-	animal.children.forEach((el) => {
-		const p = el.position.clone()
-		// console.log('prima', p)
-		el.position.applyAxisAngle(new Vector3(0, 1, 0), a)
-		el.position.applyAxisAngle(new Vector3(1, 0, 0), b)
-
-		// console.log('dopo', a, el.position)
-		// el.position.z += (Math.random() - 0.5) * 1
-		// const mesh = el.children[0]
-		// positions.push(mesh.localToWorld(mesh.geometry.boundingSphere.center))
-		// mesh.position.z += (Math.random() - 0.5) * 1.5
-		// meshes.push(mesh)
-		// scene.add(mesh)
-	})
+	rotatePuzzle(animal, angle2)
 
 	// console.log('dopo', animal.children[0].position.applyMatrix3(m))
 
 	// console.log(mouse)
 }
 
-window.addEventListener('mousedown', function (e) {
+function onDown(e) {
 	lastMousePos.x = e.pageX - mouse.x
 	lastMousePos.y = e.pageY + mouse.y
 
 	drag = true
-})
+}
 
-window.addEventListener('mouseup', function () {
+window.addEventListener('mousedown', onDown)
+window.addEventListener('touchstart', onDown)
+
+function onUp() {
 	drag = false
 
 	mouse.x = 0
 	mouse.y = 0
+}
 
-	// applyTransformation()
-
-	// lastMousePos.x = mouse.x = 0
-	// lastMousePos.y = mouse.y = 0
-})
-
-window.addEventListener('mousemove', onMove)
+window.addEventListener('mouseup', onUp)
+window.addEventListener('touchend', onUp)
 
 const scene = new THREE.Scene()
 // const camera = new THREE.PerspectiveCamera(
@@ -151,6 +168,9 @@ renderer.setClearColor(new THREE.Color('#dcddff'))
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
+renderer.domElement.addEventListener('mousemove', onMove)
+renderer.domElement.addEventListener('touchmove', onMove)
+
 // controls = new OrbitControls(camera, renderer.domElement)
 
 camera.position.set(0, 0, 5)
@@ -159,7 +179,9 @@ camera.lookAt(new THREE.Vector3(0, 0, 0))
 controls?.update()
 const uPos = { value: Math.random() * 0.3 + 0.3 }
 
-gui.add(uPos, 'value', 0, 1).name('uPos')
+// gui.add(uPos, 'value', 0, 1).name('uPos')
+// gui.add(totalAngle, 'x', -10.0, 10.0).name('x angle').listen()
+// gui.add(totalAngle, 'y', -10.0, 10.0).name('y angle').listen()
 
 let foxMeshes = []
 
@@ -176,6 +198,7 @@ function breakMesh(group) {
 		const m = new THREE.MeshStandardMaterial({
 			color: mesh.material.color,
 			side: THREE.DoubleSide,
+			map: texture,
 		})
 		m.onBeforeCompile = (shader) => {
 			shader.uniforms = Object.assign(shader.uniforms, {
@@ -261,7 +284,7 @@ let animal
 let meshes = []
 let positions = []
 
-loader.load('./src/gltf/cane.gltf', (gltf) => {
+loader.load('./src/gltf/cane_2/cane_flat_v2.gltf', (gltf) => {
 	// const fox = gltf.scene.children[0].children[0].children[0].children[0]
 	animal = gltf.scene
 	// fox.rotateX(-Math.PI * 0.5)
@@ -272,9 +295,17 @@ loader.load('./src/gltf/cane.gltf', (gltf) => {
 
 	breakMesh(animal)
 
-	animal.children.forEach((el) => {
+	animal.children.forEach((el, i) => {
+		if (i === 0) {
+			initialPos = el.position.clone()
+		}
+
 		el.position.z = 0
-		// el.position.z += (Math.random() - 0.5) * 1
+		el.position.z += (Math.random() - 0.5) * 0.75
+
+		const angle2 = new THREE.Vector2(totalAngle.x, totalAngle.y)
+		applyDeltaRot(el, angle2)
+
 		// const mesh = el.children[0]
 		// positions.push(mesh.localToWorld(mesh.geometry.boundingSphere.center))
 		// mesh.position.z += (Math.random() - 0.5) * 1.5
@@ -303,6 +334,17 @@ scene.add(lightC)
 let clock = new THREE.Clock()
 clock.start()
 
+// scene.add(m)
+
+function getAngle(v1, v2) {
+	// console.log('getAngle', v1, v2)
+	const XYNormal = new THREE.Vector3(0, 0, 1)
+	const v1p = v1.clone().normalize().projectOnPlane(XYNormal)
+	const v2p = v2.clone().normalize().projectOnPlane(XYNormal)
+
+	return v1p.angleTo(v2p)
+}
+
 function animate() {
 	requestAnimationFrame(animate)
 
@@ -310,27 +352,25 @@ function animate() {
 	// controls?.update()
 	const t = clock.getElapsedTime()
 
-	// foxMeshes.forEach((mesh, i) => {
-	// 	mesh.position.x += Math.sin(t + i * 10) ** 2 * 0.001
-	// 	mesh.position.y +=
-	// 		(Math.sin(t + i * 10) ** 2 - Math.cos(t + i * 10) ** 2) * 0.001
-	// 	// mesh.position.z += Math.sin(t + i * 10) * 0.01
-	// })
-	// arrow.setDirection(
-	// 	new THREE.Vector3().setFromSphericalCoords(
-	// 		1,
-	// 		startAngle.y + mouse.y / 300,
-	// 		startAngle.x + mouse.x / 300
-	// 	)
-	// )
-
-	// animal.forEach
-
 	if (animal) {
 		// 	const x = -mouse.x / 300
 		// 	const y = -mouse.y / 300
 		// 	// animal.rotation.x = -mouse.y / 300
 		// 	// animal.rotation.y = mouse.x / 300
+		let angle = 0
+		const dotP = m.position.clone().normalize().dot(new THREE.Vector3(0, 0, 1))
+		// console.log(dotP, dotP - 1, (dotP - 1) * Math.PI)
+
+		// console.log(initialPos)
+		if (initialPos) {
+			angle = getAngle(initialPos, animal.children[0].position)
+			console.log(angle)
+		}
+
+		animal.children.forEach((el) => {
+			el.children[0].rotation.y = (dotP - 1) * Math.PI + angle
+			// SIN(totalAngle.y) * SIN(totalAngle.x) * Math.PI
+		})
 		// 	// meshes.forEach((el, i) => {
 		// 	// 	// el.rotation.z = Math.PI * 2. * sin
 		// 	// 	// const r = positions[i].length()
@@ -350,3 +390,26 @@ function animate() {
 animate()
 
 window.addEventListener('resize', onResize)
+
+// wheel stop event
+/**
+ * function createWheelStopListener(element, callback, timeout) {
+        var handle = null;
+        var onScroll = function() {
+            if (handle) {
+                clearTimeout(handle);
+            }
+            handle = setTimeout(callback, timeout || 200); // default 200 ms
+        };
+        element.addEventListener('wheel', onScroll);
+        return function() {
+            element.removeEventListener('wheel', onScroll);
+        };
+    }
+
+    // Example usage:
+
+    createWheelStopListener(window, function() {
+        console.log('onwheelstop');
+    });
+ */
