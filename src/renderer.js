@@ -4,7 +4,7 @@ const renderer = new Renderer({ antialias: true })
 renderer.setPixelRatio(window.devicePixelRatio)
 renderer.physicallyCorrectLights = true
 renderer.toneMapping = ACESFilmicToneMapping
-renderer.toneMappingExposure = 4
+renderer.toneMappingExposure = 3
 renderer.setClearColor(new Color('#dcddff'))
 
 window.addEventListener('resize', onResize)
