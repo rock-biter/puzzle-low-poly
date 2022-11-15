@@ -1,7 +1,7 @@
 import { OrthographicCamera, Vector3 } from 'three'
 
 let aspect = window.innerWidth / window.innerHeight,
-	frustumSize = 5
+	frustumSize = 1
 
 const camera = new OrthographicCamera(
 	(frustumSize * aspect) / -2,

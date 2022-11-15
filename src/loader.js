@@ -27,7 +27,6 @@ export default function load(model, texture) {
 			loader.load(model, (gltf) => {
 				const group = gltf.scene
 				let initialPos
-				group.scale.copy(new Vector3(5, 5, 5))
 
 				breakMesh(group, texture)
 
