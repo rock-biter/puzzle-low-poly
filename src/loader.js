@@ -36,7 +36,10 @@ export default function load(model, texture) {
 					}
 
 					el.position.z = 0
-					el.position.z += (Math.random() - 0.5) * 0.75
+					el.position.z +=
+						(Math.random() - 0.5) * 0.25 +
+						Math.sin(el.position.x * 10) * 0.25 * Math.random() -
+						Math.cos(el.position.y * 10) * 0.15 * Math.random()
 				})
 
 				resolve({

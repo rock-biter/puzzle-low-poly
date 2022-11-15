@@ -25,9 +25,6 @@ function onResize() {
 	camera.lookAt(new Vector3(0, 0, 0))
 
 	camera.updateProjectionMatrix()
-	controls?.update()
-
-	renderer.setSize(window.innerWidth, window.innerHeight)
 }
 
 window.addEventListener('resize', onResize)

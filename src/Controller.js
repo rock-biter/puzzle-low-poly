@@ -1,6 +1,7 @@
 import { Vector2 } from 'three'
 
 export default class Controller {
+	drag = false
 	mouse = new Vector2(0, 0)
 	prevMouse = new Vector2(0, 0)
 	startMouse = new Vector2(0, 0)
@@ -30,17 +31,14 @@ export default class Controller {
 		const a = diff.x
 		const b = diff.y
 
-		// totalAngle.x += a
-		// totalAngle.y -= b
-
 		const angle2 = new Vector2(a, b)
-		console.log(angle2)
+		const event = new CustomEvent('ondrag', {
+			detail: {
+				angle2,
+			},
+		})
 
-		// TODO emit event
-
-		// applyDeltaRot(m, angle2)
-
-		// rotatePuzzle(animal, angle2)
+		window.dispatchEvent(event)
 	}
 
 	onDragStart(e) {
