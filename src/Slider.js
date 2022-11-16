@@ -32,7 +32,7 @@ export default class Slider {
 				() => {
 					setTimeout(() => {
 						this.next()
-					}, 3000)
+					}, 5000)
 				},
 				this
 			)

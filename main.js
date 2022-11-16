@@ -2,15 +2,13 @@ import './style.css'
 import renderer from './src/renderer'
 import scene from './src/scene'
 import camera from './src/camera'
-import load from './src/loader'
-import Puzzle from './src/Puzzle'
 import Controller from './src/Controller'
 import Slider from './src/Slider'
+import logo from './src/image/logo.png?url'
 
 import { GUI } from 'dat.gui'
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { TextureLoader } from 'three'
 
 import textureUrl from './src/gltf/materialbasecolortexture.png?url'
 import model from './src/gltf/cane_2/cane_flat_v2.gltf?url'
@@ -19,6 +17,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 // import {  } from 'three/examples/js/postprocessing/';
 import { BokehPass } from './src/addon/postprocessing/BokehPass'
+
+const logoImage = (document.getElementById('logo').src = logo)
 
 const postprocessing = {}
 
