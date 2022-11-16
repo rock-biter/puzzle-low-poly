@@ -5,6 +5,7 @@ import camera from './src/camera'
 import load from './src/loader'
 import Puzzle from './src/Puzzle'
 import Controller from './src/Controller'
+import Slider from './src/Slider'
 
 import { GUI } from 'dat.gui'
 
@@ -22,9 +23,9 @@ import { BokehPass } from './src/addon/postprocessing/BokehPass'
 const postprocessing = {}
 
 const effectController = {
-	focus: 4,
-	aperture: 4.3,
-	maxblur: 0.0037,
+	focus: 10,
+	aperture: 3,
+	maxblur: 0.004,
 }
 
 const composer = new EffectComposer(renderer)
@@ -39,18 +40,22 @@ postprocessing.bokeh = bokehPass
 
 let controls
 
-// controls = new OrbitControls(camera, renderer.domElement)
+controls = new OrbitControls(camera, renderer.domElement)
 controls?.update()
 
-const puzzle = new Puzzle({ srcModel: model, srcTexture: textureUrl })
+const sources = [
+	{ srcModel: model, srcTexture: textureUrl },
+	{ srcModel: model, srcTexture: textureUrl },
+	{ srcModel: model, srcTexture: textureUrl },
+	{ srcModel: model, srcTexture: textureUrl },
+]
+
+const slider = new Slider({ sources, scene })
 
 const init = async () => {
-	await puzzle.load()
+	await slider.mount()
 
-	scene.add(puzzle.model)
 	// scene.add(puzzle.handle)
-
-	puzzle.show()
 
 	document.body.appendChild(renderer.domElement)
 
@@ -77,7 +82,7 @@ const init = async () => {
 	// gui.add(effectController, 'focus', -100, 100, 1).onChange(matChanger)
 	// gui.add(effectController, 'aperture', 0, 10, 0.01).onChange(matChanger)
 	// gui.add(effectController, 'maxblur', 0.0, 0.01, 0.0001).onChange(matChanger)
-	// gui.close()
+	// // gui.close()
 
 	matChanger()
 }
