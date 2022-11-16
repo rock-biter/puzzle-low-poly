@@ -4,9 +4,12 @@ import {
 	MeshBasicMaterial,
 	DoubleSide,
 	Vector3,
+	sRGBEncoding,
+	LinearEncoding,
 } from 'three'
 
 const loader = new GLTFLoader()
+const size = 0.3
 
 function breakMesh(
 	group,
@@ -16,14 +19,22 @@ function breakMesh(
 ) {
 	group.children.forEach(({ children }) => {
 		const [mesh] = children
-		const m = new MeshBasicMaterial({
-			color: mesh.material.color,
-			side: DoubleSide,
-			map: texture,
-			transparent: true,
-		})
 
-		m.onBeforeCompile = (shader) => {
+		mesh.material.map.encoding = sRGBEncoding
+		mesh.material.map.encoding = sRGBEncoding
+		mesh.material.transparent = true
+		// console.log(mesh.material)
+		// const m = new MeshStandardMaterial({
+		// 	color: mesh.material.color,
+		// 	side: DoubleSide,
+		// 	map: texture,
+		// 	transparent: true,
+		// })
+		// mesh.material.map = texture
+
+		// console.log(m)
+
+		mesh.material.onBeforeCompile = (shader) => {
 			shader.uniforms = Object.assign(shader.uniforms, {
 				uScale,
 				uOpacity,
@@ -40,23 +51,31 @@ function breakMesh(
 			shader.vertexShader = shader.vertexShader.replace(
 				'#include <begin_vertex>',
 				`
-				
+
 				vec3 transformed = vec3( position ) * uScale;
-			
+
 			`
 			)
 
-			shader.fragmentShader = 'uniform float uOpacity;' + shader.fragmentShader
-
 			shader.fragmentShader = shader.fragmentShader.replace(
-				'vec4 diffuseColor = vec4( diffuse, opacity );',
+				'uniform float opacity;',
 				`
-				vec4 diffuseColor = vec4( diffuse, uOpacity );
+				uniform float opacity;
+				uniform float uOpacity;
 				`
 			)
+
+			shader.fragmentShader = shader.fragmentShader.replace(
+				'}',
+				`
+				gl_FragColor.a = uOpacity;
+			}
+				`
+			)
+			console.log(shader.fragmentShader)
 		}
 
-		mesh.material = m
+		// mesh.material = m
 	})
 }
 
@@ -84,6 +103,7 @@ export default function load(
 						(Math.random() - 0.5) * 0.25 +
 						Math.sin(el.position.x * 10) * 0.25 * Math.random() -
 						Math.cos(el.position.y * 10) * 0.15 * Math.random()
+					el.z *= size
 				})
 
 				resolve({

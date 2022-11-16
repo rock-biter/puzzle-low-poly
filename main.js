@@ -5,18 +5,23 @@ import camera from './src/camera'
 import Controller from './src/Controller'
 import Slider from './src/Slider'
 import logo from './src/image/logo.png?url'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 
 import { GUI } from 'dat.gui'
 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
-import textureUrl from './src/gltf/materialbasecolortexture.png?url'
-import model from './src/gltf/cane_2/cane_flat_v2.gltf?url'
+// import textureUrl from './src/gltf/materialbasecolortexture.png?url'
+// import model from './src/gltf/cane_2/cane_flat_v2.gltf?url'
+
+import textureUrl from './src/gltf/pesca/pesca.jpeg?url'
+import model from './src/gltf/pesca/pesca.gltf?url'
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 // import {  } from 'three/examples/js/postprocessing/';
 import { BokehPass } from './src/addon/postprocessing/BokehPass'
+import { AmbientLight } from 'three'
 
 const logoImage = (document.getElementById('logo').src = logo)
 
@@ -85,6 +90,13 @@ const init = async () => {
 	// // gui.close()
 
 	matChanger()
+
+	// const pesca = new GLTFLoader().load(model, (gltf) => {
+	// 	scene.add(gltf.scene)
+	// })
+
+	const light = new AmbientLight('#ffffff', 5)
+	scene.add(light)
 }
 
 init()
