@@ -9,6 +9,7 @@ import {
 import gsap from 'gsap'
 import load from './loader'
 import { getAngle, applyDeltaRot } from './math'
+import { GUI } from 'dat.gui'
 
 const tLoader = new TextureLoader()
 
@@ -30,13 +31,26 @@ export default class Puzzle {
 
 	isActive = false
 
-	constructor({ srcModel, srcTexture }) {
+	callbacks = {
+		onComplete: [],
+		onMount: [],
+	}
+
+	uScale = { value: 0.0 }
+	uOpacity = { value: 0.0 }
+
+	scene
+
+	constructor({ srcModel, srcTexture, scene }) {
+		this.scene = scene
 		this.srcModel = srcModel
 		this.srcTexture = srcTexture
 
 		this.tl = gsap.timeline({ paused: true })
 
 		window.addEventListener('ondrag', this.onDrag)
+
+		// this.gui()
 	}
 
 	initHandle() {
@@ -50,7 +64,6 @@ export default class Puzzle {
 
 	onDrag = (e) => {
 		const { angle2 } = e.detail
-		// console.log(this.angle2)
 		this.rotatePuzzle(angle2)
 	}
 
@@ -58,31 +71,14 @@ export default class Puzzle {
 		this.angle2.x += angle2.x
 		this.angle2.y += angle2.y
 
-		// console.log(this.angle2)
-
 		if (this.isActive) {
-			// console.log(this.meshDotHandle)
 			this.applyAngle(angle2)
 		}
 	}
 
 	rotateToSnap() {
-		// const angle = this.angle2.clone().add(this.startAngle2).negate()
-		// const { x, y } = angle
 		const rif = new Vector3(0, 0, 1)
 		const diff = rif.sub(this.handle.position.clone().normalize())
-
-		console.log('diff', diff)
-
-		// this.model.children.forEach((el) => {
-		// 	const length = el.position.length()
-		// 	const p = el.position.clone().add(diff)
-
-		// 	console.log('----->', el.position, p)
-
-		// 	gsap.to(el.position, { duration: 1, x: p.x, y: p.y, z: p.z })
-		// })
-
 		this.applyAngle(diff, true, 0.5)
 	}
 
@@ -91,7 +87,12 @@ export default class Puzzle {
 			try {
 				tLoader.load(this.srcTexture, async (texture) => {
 					this.texture = texture
-					const { group, initialPos } = await load(this.srcModel, this.texture)
+					const { group, initialPos } = await load(
+						this.srcModel,
+						this.texture,
+						this.uScale,
+						this.uOpacity
+					)
 					this.model = group
 					this.initialPos = initialPos
 					this.initHandle()
@@ -113,28 +114,65 @@ export default class Puzzle {
 	}
 
 	initTimeline() {
-		gsap.set(this.scaleMap, {
+		gsap.set(this.model.scale, {
 			x: 0,
 			y: 0,
 			z: 0,
 		})
 
-		this.tl.to(this.scaleMap, {
-			x: 1,
-			y: 1,
-			z: 1,
-			duration: 0.3,
-			onComplete: () => {
-				this.isActive = true
-			},
-			onReverseComplete: () => {
-				this.isActive = false
-			},
-			stagger: {
-				amount: 0.5,
-				from: 'random',
-			},
-		})
+		this.tl
+			.addLabel('show')
+			.fromTo(
+				this.model.scale,
+				{ x: 0, y: 0, z: 0 },
+				{ duration: 0.8, x: 1, y: 1, z: 1 }
+			)
+			.fromTo(this.uOpacity, { value: 0 }, { duration: 0.6, value: 1 }, '<')
+			.fromTo(
+				this.uScale,
+				{ value: 0 },
+				{
+					duration: 0.8,
+					value: 1,
+					onComplete: () => {
+						this.isActive = true
+						this.tl.pause()
+					},
+					onStart: () => {
+						this.scene.add(this.model)
+					},
+				},
+				'<'
+			)
+
+		this.tl
+			.addLabel('completed')
+			.to(this.uScale, { duration: 0.5, value: 0.5 })
+			.to(this.uScale, {
+				duration: 0.5,
+				value: 1.001,
+				onComplete: () => {
+					this.tl.pause()
+				},
+			})
+
+		this.tl
+			.addLabel('hide')
+			.fromTo(
+				this.model.scale,
+				{ x: 1, y: 1, z: 1 },
+				{
+					duration: 0.5,
+					x: 0,
+					y: 0,
+					z: 0,
+					onComplete: () => {
+						this.uScale.value = 0
+						this.scene.remove(this.model)
+					},
+				}
+			)
+			.to(this.uOpacity, { duration: 0.3, value: 0 }, '<')
 	}
 
 	get meshDotHandle() {
@@ -169,23 +207,28 @@ export default class Puzzle {
 	onComplete() {
 		this.isActive = false
 		this.rotateToSnap()
-		gsap.to(this.model.rotation, { duration: 1, z: this.angle })
+		gsap.to(this.model.rotation, {
+			duration: 1,
+			z: this.angle,
+			onComplete: () => {
+				this.tl.play('completed')
+
+				for (const callback of this.onCompleteCallbacks) {
+					callback.callback.call(callback.thisArg)
+				}
+			},
+		})
 	}
 
 	onBeforeMount() {}
 
 	show() {
 		this.randomize()
-		gsap.fromTo(
-			this.model.scale,
-			{ x: 0.2, y: 0.2, z: 0.2 },
-			{ duration: 0.8, x: 1, y: 1, z: 1 }
-		)
-		this.tl.restart()
+		this.tl.play('show')
 	}
 
 	hide() {
-		this.tl.reverse()
+		this.tl.play('hide')
 	}
 
 	applyAngle(angle2, ease = false, duration = 0.5) {
@@ -198,8 +241,6 @@ export default class Puzzle {
 
 	rotatePolygon() {
 		this.angle = this.getAngleBetween()
-		// console.log('angle between', angle)
-		// console.log('dot', this.meshDotHandle)
 		this.model.children.forEach((el) => {
 			el.children[0].rotation.y =
 				(this.meshDotHandle - 1) * Math.PI + this.angle
@@ -210,12 +251,26 @@ export default class Puzzle {
 		this.reset()
 		const angle2 = new Vector2(Math.random() * Math.PI, Math.random() * Math.PI)
 		this.startAngle2.copy(angle2)
-		// console.log('start', this.startAngle2)
-		// const angle2 = new Vector2(0, 0)
 		this.applyAngle(angle2)
 	}
 
 	reset() {
 		this.model.rotation.z = 0
+	}
+
+	registerCallback(type, callback, thisArg) {
+		if (type && typeof callback === 'function') {
+			this.callbacks[type].push({ callback, thisArg })
+		}
+	}
+
+	get onCompleteCallbacks() {
+		return this.callbacks['onComplete']
+	}
+
+	gui() {
+		const gui = new GUI()
+		gui.add(this.uScale, 'value', 0, 1, 0.01).name('scala')
+		gui.add(this.uOpacity, 'value', 0, 1, 0.01).name('opacità')
 	}
 }
