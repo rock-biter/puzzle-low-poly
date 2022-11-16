@@ -40,7 +40,7 @@ postprocessing.bokeh = bokehPass
 
 let controls
 
-controls = new OrbitControls(camera, renderer.domElement)
+// controls = new OrbitControls(camera, renderer.domElement)
 controls?.update()
 
 const sources = [
