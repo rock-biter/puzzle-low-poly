@@ -23,6 +23,8 @@ export default class Puzzle {
 
 	initialPos
 
+	messageRef
+
 	tl
 
 	angle = 0
@@ -49,6 +51,8 @@ export default class Puzzle {
 		this.tl = gsap.timeline({ paused: true })
 
 		window.addEventListener('ondrag', this.onDrag)
+
+		this.messageRef = document.getElementById('message')
 
 		// this.gui()
 	}
@@ -125,7 +129,15 @@ export default class Puzzle {
 			.fromTo(
 				this.model.scale,
 				{ x: 0, y: 0, z: 0 },
-				{ duration: 0.8, x: 1, y: 1, z: 1 }
+				{
+					duration: 0.8,
+					x: 1,
+					y: 1,
+					z: 1,
+					onStart: () => {
+						gsap.to(message, { autoAlpha: 0, yPercent: 100 })
+					},
+				}
 			)
 			.fromTo(this.uOpacity, { value: 0 }, { duration: 0.6, value: 1 }, '<')
 			.fromTo(
@@ -153,6 +165,7 @@ export default class Puzzle {
 				value: 1.001,
 				onComplete: () => {
 					this.tl.pause()
+					gsap.to(message, { autoAlpha: 1, yPercent: 0 })
 				},
 			})
 
@@ -249,7 +262,10 @@ export default class Puzzle {
 
 	randomize() {
 		this.reset()
-		const angle2 = new Vector2(Math.random() * Math.PI, Math.random() * Math.PI)
+		const angle2 = new Vector2(
+			Math.random() * Math.PI + (+Math.random() * Math.PI) / 2,
+			Math.random() * Math.PI + (+Math.random() * Math.PI) / 2
+		)
 		this.startAngle2.copy(angle2)
 		this.applyAngle(angle2)
 	}
