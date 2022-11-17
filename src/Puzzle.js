@@ -194,13 +194,7 @@ export default class Puzzle {
 			.normalize()
 			.dot(new Vector3(0, 0, 1))
 
-		if (dotP >= 0.9999 && this.isActive) {
-			// this.hide()
-			// this.isActive = false
-			// this.rotateToSnap()
-			// setTimeout(() => {
-			// 	this.randomize()
-			// }, 2000)
+		if (dotP >= 0.99995 && this.isActive) {
 			this.onComplete()
 		}
 

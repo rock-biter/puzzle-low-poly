@@ -68,8 +68,8 @@ const init = async () => {
 		requestAnimationFrame(animate)
 		controls?.update()
 
-		// renderer.render(scene, camera)
-		composer.render(0.1)
+		renderer.render(scene, camera)
+		// composer.render(0.1)
 	}
 
 	animate()
@@ -100,3 +100,45 @@ const init = async () => {
 }
 
 init()
+
+const expand = document.getElementById('expand')
+const compress = document.getElementById('compress')
+
+expand?.addEventListener('click', fullscreenOn)
+
+compress?.addEventListener('click', fullscreenOut)
+
+function fullscreenOn() {
+	expand.classList.add('hidden')
+	compress.classList.remove('hidden')
+
+	if (renderer.domElement.requestFullscreen) {
+		renderer.domElement.requestFullscreen()
+	} else {
+		renderer.domElement.webkitRequestFullscreen()
+	}
+	// fullscreen on
+}
+
+function fullscreenOut() {
+	compress.classList.add('hidden')
+	expand.classList.remove('hidden')
+
+	if (document.exitFullscreen) {
+		document.exitFullscreen()
+	} else {
+		document.webkitExitFullscreen()
+	}
+	// fullscreen out
+}
+
+// window.addEventListener('dblclick', () => {
+// 	console.log('dblclick')
+// 	const fullscreenEl =
+// 		document.fullscreenElement || document.webkitFullscreenElement
+// 	if (!fullscreenEl) {
+// 		fullscreenOn()
+// 	} else {
+// 		fullscreenOut()
+// 	}
+// })
